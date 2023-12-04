@@ -83,6 +83,7 @@ protobuf==4.25.0
 psutil==5.9.4
 ptyprocess==0.7.0
 pure-eval==0.2.2
+py4j==0.10.9.7
 pyarrow==14.0.1
 pycparser==2.21
 pydeck==0.8.1b0
@@ -90,6 +91,7 @@ Pygments==2.14.0
 pyparsing==3.1.1
 pyrsistent==0.19.3
 PySocks==1.7.1
+pyspark==3.5.0
 python-dateutil==2.8.2
 python-json-logger==2.0.4
 pytz==2022.7.1
