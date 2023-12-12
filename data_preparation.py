@@ -23,7 +23,7 @@ import seaborn as sns
 
 
 def remove_missing_userid(df):
-    condition = user_log.userId != ''
+    condition = df.userId != ''
     df= df.filter(condition)
     
     return df
@@ -104,11 +104,19 @@ def create_features(df):
                               spark_avg('count_sessions_per_day').alias('avg_count_session_per_day')
     )
    
+    # aggregate counts per page per user
+    page_counts_per_user = df.groupBy('userId', 'page').count()
+    agg_df4 = page_counts_per_user.groupBy('userId').pivot('page').sum('count')
+    agg_df4 = agg_df4.na.fill(0)
+
+
+
     
     #join all agg_df
     
     user_df = agg_df1.join(agg_df2,['userid']) 
     user_df = user_df.join(agg_df3,['userid'])
+    user_df = user_df.join(agg_df4,['userid'])
 
     return user_df
 
@@ -125,10 +133,10 @@ if __name__ == "__main__":
 
 # function to load the dataset
     path = "mini_sparkify_event_data.json"
-    user_log = spark.read.json(path)
+    df = spark.read.json(path)
     
     print('Here is the data schema')
-    print(user_log.printSchema())
+    print(df.printSchema())
 
     print('Removing rows with missing UserId...')
     df = remove_missing_userid(df)
@@ -167,10 +175,9 @@ if __name__ == "__main__":
     
     user_df = create_features(df)
     
+    user_df_pd = user_df.toPandas()
     print('Saving our new dataset ...')
     
-    csv_file_path = "user_data_final.csv"
-    user_df.write.csv(csv_file_path)
+    user_df_pd.to_csv('user_data.csv', index=False)
 
-
-    print(f'Data prepared sucessfully and saved as {csv_file_path}.')
+    print(f'Data prepared sucessfully and saved.')
