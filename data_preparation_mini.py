@@ -1,6 +1,7 @@
 # import libraries
 import pyspark
 from pyspark import SparkConf
+from pyspark import SparkFiles
 from pyspark.sql import SparkSession
 
 from pyspark.sql.types import StringType
@@ -127,13 +128,13 @@ if __name__ == "__main__":
     # create a Spark session
     spark = SparkSession \
         .builder \
-        .appName("Sparkify project data preparation") \
+        .appName("Sparkify - data preparation") \
         .getOrCreate()
 
+    spark.sparkContext.addFile("https://udacity-dsnd.s3.amazonaws.com/sparkify/mini_sparkify_event_data.json")
 
-# function to load the dataset
-    path = "mini_sparkify_event_data.json"
-    df = spark.read.json(path)
+    file_path = SparkFiles.get("mini_sparkify_event_data.json")
+    df = spark.read.json(file_path)
     
     print('Here is the data schema')
     print(df.printSchema())
