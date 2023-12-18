@@ -8,14 +8,32 @@
 
 
 #libraries
+# import libraries
 import pyspark
 from pyspark import SparkConf
+from pyspark import SparkFiles
+
 from pyspark.sql import SparkSession
+
+from pyspark.sql.types import StringType
+from pyspark.sql.types import IntegerType
+from pyspark.sql.types import TimestampType
+
+
+from pyspark.sql.functions import isnan, count, when, col, desc, udf, col, sort_array, asc, desc, countDistinct, first
+from pyspark.sql.functions import udf, trim,expr
+from pyspark.sql.functions import to_date, year, month, dayofmonth, dayofweek, hour, date_format, substring,datediff
+from pyspark.sql.functions import sum as spark_sum, avg as spark_avg
 
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler, MinMaxScaler, StandardScaler
 from pyspark.ml import Pipeline
-from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
+
+from pyspark.ml.classification import LogisticRegression, RandomForestClassifier, GBTClassifier
+
 from pyspark.ml.evaluation import BinaryClassificationEvaluator, MulticlassClassificationEvaluator
+
+from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
+
 
 #creating spark session
 spark = SparkSession \
@@ -26,7 +44,7 @@ spark = SparkSession \
 
 path = "user_data.csv"
 
-df = spark.read.csv(path)
+df = spark.read.option("header", "true").option("inferSchema", "true").csv(path)
 
 #dataframe dimension
 # extracting number of rows from the Dataframe
@@ -40,25 +58,32 @@ print(f'Dimension of the Dataframe is: {(row,col)}')
 print(f'Number of Rows are: {row}')
 print(f'Number of Columns are: {col}')
 
+print(df.printSchema())
+
 #indexing categorical values
 gender_indexer = StringIndexer(inputCol="gender", outputCol="gender_index")
 state_indexer = StringIndexer(inputCol="state", outputCol="state_index")
 
-
+print('indexing categorical data')
 indexed_data = gender_indexer.fit(df).transform(df)
 indexed_data = state_indexer.fit(indexed_data).transform(indexed_data)
 
+print('creating train and test sets')
+train_df, test_df = indexed_data.randomSplit(weights=[0.8,0.2], seed=200)
 
-train, test = indexed_data.randomSplit(weights=[0.8,0.2], seed=200)
-train_oversampled = train.union(train.filter(col("churn_label") == 1))
+print(train_df)
+print('oversampling train set')
+train_oversampled = train_df.union(train_df.filter(col("churn_label") == 1))
 
 
 #encoders
+print('creating encoders')
 gender_encoder = OneHotEncoder(inputCol="gender_index", outputCol="gender_encoded")
 state_encoder = OneHotEncoder(inputCol="state_index", outputCol="state_encoded")
 
 
 #assembler
+print('creating feature assembler')
 cols_for_assembler = [ 'unique_artist_count', 
        'total_session_length', 'avg_session_length',
        'unique_song_count', 'total_items', 'avg_items',
@@ -74,12 +99,15 @@ cols_for_assembler = [ 'unique_artist_count',
 assembler = VectorAssembler(inputCols=cols_for_assembler, outputCol="features")
 
 #scaler
+print('scaling features')
 scaler = StandardScaler(inputCol='features', outputCol='scaled_features', withStd=True, withMean=True)
 
 #label indexer
+print('creating label')
 label_indexer = StringIndexer(inputCol='churn_label', outputCol='label')
 
 # List of models to evaluate
+print('creating the three models')
 models = [
     LogisticRegression(featuresCol='scaled_features', labelCol='label'),
     RandomForestClassifier(featuresCol='scaled_features', labelCol='label'),
