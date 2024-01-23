@@ -7,6 +7,7 @@ from pyspark.sql import SparkSession
 spark = SparkSession.builder.appName("ChurnPredictionApp").getOrCreate()
 rf_model = PipelineModel.load("rf_model")
 test_data = spark.read.parquet("test_data")
+test_predictions = spark.read.parquet("test_predictions")
 
 # Get feature names and importance scores
 feature_names = test_data.columns  # replace with your actual feature names
@@ -14,6 +15,11 @@ feature_importance = rf_model.stages[-1].featureImportances
 
 # Streamlit App
 st.title("Churn Prediction App")
+st.write(test_data.head())
+
+
+
+
 
 # User Input
 st.sidebar.header("User Input")
