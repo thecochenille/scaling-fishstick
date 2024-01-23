@@ -5,7 +5,7 @@ from pyspark.sql import SparkSession
 
 # Load the pre-trained Spark model
 spark = SparkSession.builder.appName("ChurnPredictionApp").getOrCreate()
-rf_model = PipelineModel.load("../rf_model")
+rf_model = PipelineModel.load("rf_model")
 test_data = spark.read.parquet("test_data")
 
 # Get feature names and importance scores
