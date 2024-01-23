@@ -1,3 +1,16 @@
+"""
+File: data_preparation_mini.py
+Author: Isabelle Vea
+Date: 12/14/20123 (last edits)
+
+Description: This scripts takes a json dataset mini_sparkify_event_data.json (a small dataset) that 
+contains usage records of a fictional music platform Sparkify and prepares a new dataset to 
+perform churn prediction analysis. The output file is saved in a csv file 
+to be processed in the model_training_mini.py for model training.
+"""
+
+
+
 # import libraries
 import pyspark
 from pyspark import SparkConf

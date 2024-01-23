@@ -1,4 +1,17 @@
-# load saved prepared dataset
+"""
+File: model_training_mini.py
+Author: Isabelle Vea
+Date: 12/14/20123 (last edits)
+
+Description: This scripts uses the csv file output from data_preparation_mini.py,
+split and performs last transformations, scaling to train three main models. 
+This scripts should provide evaluation reports for each model trained and 
+save the best model to be used.
+
+"""
+
+
+# load saved prepared dataset (csv file)
 # last data engineering steps
 # building pipeline to train the training set
 # training models
@@ -42,23 +55,26 @@ spark = SparkSession \
     .getOrCreate()
 
 
-path = "user_data.csv"
+output_path = "models"
+path = "user_data.csv" #prepared dataset to use for training
 
 df = spark.read.option("header", "true").option("inferSchema", "true").csv(path)
 
+for column_name in df.columns: #replaces space in column names into _
+    new_column_name = column_name.replace(" ", "_")
+    df = df.withColumnRenamed(column_name, new_column_name)
+
+
 #dataframe dimension
-# extracting number of rows from the Dataframe
-row = df.count()
-   
-# extracting number of columns from the Dataframe
-col = len(df.columns)
+row = df.count() # extracting number of rows 
+col = len(df.columns) # extracting number of columns 
  
 # printing
 print(f'Dimension of the Dataframe is: {(row,col)}')
 print(f'Number of Rows are: {row}')
 print(f'Number of Columns are: {col}')
 
-print(df.printSchema())
+print(df.printSchema()) #printing our all column names
 
 #indexing categorical values
 gender_indexer = StringIndexer(inputCol="gender", outputCol="gender_index")
@@ -69,22 +85,20 @@ indexed_data = gender_indexer.fit(df).transform(df)
 indexed_data = state_indexer.fit(indexed_data).transform(indexed_data)
 
 print('creating train and test sets')
-train_df, test_df = indexed_data.randomSplit(weights=[0.8,0.2], seed=200)
-
-print(train_df)
-print('oversampling train set')
-train_oversampled = train_df.union(train_df.filter(col("churn_label") == 1))
+train_df, test_df = indexed_data.randomSplit(weights=[0.8,0.2], seed=200) #splitting dataset into traing_df and test_df
 
 
-#encoders
-print('creating encoders')
-gender_encoder = OneHotEncoder(inputCol="gender_index", outputCol="gender_encoded")
-state_encoder = OneHotEncoder(inputCol="state_index", outputCol="state_encoded")
+#preprocessing functions
+#encoders function
+def create_encoders():
+    gender_encoder = OneHotEncoder(inputCol="gender_index", outputCol="gender_encoded")
+    state_encoder = OneHotEncoder(inputCol="state_index", outputCol="state_encoded")
+    return [gender_encoder, state_encoder]
 
 
-#assembler
-print('creating feature assembler')
-cols_for_assembler = [ 'unique_artist_count', 
+#feature assembler function
+def create_feature_assembler():
+    cols_for_assembler = [ 'unique_artist_count', 
        'total_session_length', 'avg_session_length',
        'unique_song_count', 'total_items', 'avg_items',
        'avg_session_length_per_month', 'avg_items_per_month',
@@ -96,84 +110,60 @@ cols_for_assembler = [ 'unique_artist_count',
        'Thumbs_Down', 'Thumbs_Up', 'Upgrade',
        'state_encoded', 'gender_encoded']
 
-assembler = VectorAssembler(inputCols=cols_for_assembler, outputCol="features")
+    assembler = VectorAssembler(inputCols=cols_for_assembler, outputCol="features")
+    return assembler
 
-#scaler
-print('scaling features')
-scaler = StandardScaler(inputCol='features', outputCol='scaled_features', withStd=True, withMean=True)
 
-#label indexer
-print('creating label')
-label_indexer = StringIndexer(inputCol='churn_label', outputCol='label')
+#scaler function
+def create_scaler():
+    scaler = StandardScaler(inputCol='features', outputCol='scaled_features', withStd=True, withMean=True)
+    return scaler
 
-# List of models to evaluate
-print('creating the three models')
-models = [
-    LogisticRegression(featuresCol='scaled_features', labelCol='label'),
-    RandomForestClassifier(featuresCol='scaled_features', labelCol='label'),
-    GBTClassifier(featuresCol='scaled_features', labelCol='label')
-]
+#label indexer function
+def create_label_indexer():
+    label_indexer = StringIndexer(inputCol='churn_label', outputCol='label')
+    return label_indexer
 
-# Dictionary to store the best model and its metric value
-best_model_info = {
-    'model': None,
-    'metric_value': float('-inf')  # Initialize with a very small value for AUC
-}
-
-num_rows = train_oversampled.count()
-if num_rows < 1000:
-    num_folds = 5
-elif 1000 <= num_rows < 10000:
-    num_folds = 8
-else:
-    num_folds = 10
+#function that trains and evaluate a model
+def train_and_evaluate_model(model, train_data, test_data):
     
-for model in models:
-    # Assign names to each model
-    if isinstance(model, RandomForestClassifier):
-        model_name = "Random Forest"
-    elif isinstance(model, LogisticRegression):
-        model_name = "Logistic Regression"
-    elif isinstance(model, GradientBoostedTreeClassifier):
-        model_name = "Gradient Boosted Tree"
-    else:
-        # Handle other model types if needed
-        model_name = "UnknownModel"
-        
-    # Assuming 'model_name' is a string representing the model name (e.g., "RandomForest")
-    print(f"Evaluating {model_name}...")
+    trained_model = model.fit(train_data)
+    predictions = trained_model.transform(test_data)
+    evaluator = BinaryClassificationEvaluator()
+    auc = evaluator.evaluate(predictions)
+    
+    return auc
 
-    # Assuming 'param_grid' is a ParamGrid for model hyperparameter tuning
-    param_grid = ParamGridBuilder().build()
+# preprocessing steps
+encoders = create_encoders()
+assembler = create_feature_assembler()
+scaler = create_scaler()
+label_indexer = create_label_indexer()
 
-    # Assuming 'pipeline' is your feature engineering and model pipeline
-    pipeline = Pipeline(stages=[gender_encoder, state_encoder, assembler, scaler, label_indexer, model])
+#defining my models
+rf_model = RandomForestClassifier(featuresCol='scaled_features', labelCol='label')
+lr_model = LogisticRegression(featuresCol='scaled_features', labelCol='label')
+gbt_model = GBTClassifier(featuresCol='scaled_features', labelCol='label')
 
-    # Assuming 'evaluator' is your BinaryClassificationEvaluator
-    evaluator = BinaryClassificationEvaluator(labelCol='label', metricName='areaUnderROC')
+#pipeline for each model
+rf_pipeline = Pipeline(stages=[*encoders, assembler, scaler, label_indexer, rf_model])
+lr_pipeline = Pipeline(stages=[*encoders, assembler, scaler, label_indexer, lr_model])
+gbt_pipeline = Pipeline(stages=[*encoders, assembler, scaler, label_indexer, gbt_model])
 
-    # Assuming 'num_folds' is the number of cross-validation folds
-    cv = CrossValidator(estimator=pipeline, estimatorParamMaps=param_grid, evaluator=evaluator, numFolds=num_folds)
+#train and evaluate each model 
+rf_auc = train_and_evaluate_model(rf_pipeline, train_df, test_df)
+lr_auc = train_and_evaluate_model(lr_pipeline, train_df, test_df)
+gbt_auc = train_and_evaluate_model(gbt_pipeline, train_df, test_df)
 
-    # Fit the cross-validator
-    cv_model = cv.fit(train_oversampled)
+print("Random Forest AUC:", rf_auc)
+print("Logistic Regression AUC:", lr_auc)
+print("GBT Classifier AUC:", gbt_auc)
 
-    #making predictions
-    predictions = cv_model.transform(test)
+models = [(rf_auc, rf_model), (lr_auc, lr_model), (gbt_auc, gbt_model)]
+best_auc, best_model = max(models, key=lambda x: x[0])
 
-    # evaluate the model
-    metric_value = evaluator.evaluate(predictions)
-    print(f"{evaluator_metric} on test set: {metric_value}")
+if all(auc == best_auc for auc, _ in models):
+    print("All models have the same AUC. Saving the Logistic Regression model.")
+    best_model = lr_model
 
-    # compare and update the best model information
-    if metric_value > best_model_info['metric_value']:
-        best_model_info['model'] = cv_model
-        best_model_info['metric_value'] = metric_value
-
-# save the best model to a pickle file
-best_model = best_model_info['model']
-best_model_path = "best_model.pkl"
-with open(best_model_path, 'wb') as file:
-    pickle.dump(best_model, file)
-
-print(f"Best model is {cv_model} and was saved to: {best_model_path}")
+best_model.save("best_model")

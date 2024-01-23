@@ -1,3 +1,18 @@
+"""
+File: data_preparation.py
+Author: Isabelle Vea
+Date: 12/14/20123 (last edits)
+
+Description: This scripts takes a json dataset sparkify_event_data.json (a large dataset) that 
+contains usage records of a fictional music platform Sparkify and prepares a new dataset to 
+perform churn prediction analysis. The output file is saved in a csv file 
+to be processed in the model_training.py for model training.
+
+NB: The dataset used in this script needs to be processed in a cluster and uses spark to do so.
+"""
+
+
+
 # import libraries
 import pyspark
 from pyspark import SparkConf
