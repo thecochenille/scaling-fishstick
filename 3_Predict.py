@@ -15,6 +15,7 @@ test_data = spark.read.parquet("test_data")
 # Streamlit App
 st.title("Churn Prediction App")
 
+st.write(print(test_data.take(1)))
 # User Input
 st.sidebar.header("User Input")
 
