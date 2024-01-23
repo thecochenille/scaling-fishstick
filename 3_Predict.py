@@ -16,6 +16,7 @@ feature_importance = rf_model.stages[-1].featureImportances
 # Streamlit App
 st.title("Churn Prediction App")
 st.write(test_data.head())
+st.write(test_predictions.head())
 
 
 
