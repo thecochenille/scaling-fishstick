@@ -18,6 +18,7 @@ st.title("Churn Prediction App")
 st.write(test_data.head())
 st.write(test_predictions.head())
 
+st.write(feature_importance.head())
 
 
 
