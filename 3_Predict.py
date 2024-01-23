@@ -24,7 +24,7 @@ for feature, importance in zip(feature_names, feature_importance):
     user_input = st.sidebar.number_input(f"Enter {feature}:", min_value=0.0)
 
 # Perform predictions based on user input
-#if st.sidebar.button("Predict Churn"):
+if st.sidebar.button("Predict Churn"):
     # Create a DataFrame with user input
     user_data = pd.DataFrame({feature: [user_input] for feature, user_input in zip(feature_names, user_input)})
     spark_user_data = spark.createDataFrame(user_data)
