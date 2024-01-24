@@ -55,7 +55,6 @@ spark = SparkSession \
     .getOrCreate()
 
 
-output_path = "models"
 path = "user_data.csv" #prepared dataset to use for training
 
 df = spark.read.option("header", "true").option("inferSchema", "true").csv(path)
@@ -84,8 +83,15 @@ print('indexing categorical data')
 indexed_data = gender_indexer.fit(df).transform(df)
 indexed_data = state_indexer.fit(indexed_data).transform(indexed_data)
 
-print('creating train and test sets')
-train_df, test_df = indexed_data.randomSplit(weights=[0.8,0.2], seed=200) #splitting dataset into traing_df and test_df
+print('creating train, validation and test sets')
+train_df, remaining_df = indexed_data.randomSplit([0.7, 0.3], seed=42)
+
+# The second split: 50% of the remaining data for validation, 50% for testing
+validation_df, test_df = remaining_df.randomSplit([0.5, 0.5], seed=42)
+
+print('saving test set')
+#saving test set to be used for the app
+test_df.write.parquet("test_data", mode="overwrite")
 
 
 #preprocessing functions
@@ -125,20 +131,22 @@ def create_label_indexer():
     return label_indexer
 
 #function that trains and evaluate a model
-def train_and_evaluate_model(model, train_data, test_data):
+def train_and_evaluate_model(model, train_data, validation_data):
     
     trained_model = model.fit(train_data)
-    predictions = trained_model.transform(test_data)
+    predictions = trained_model.transform(validation_data)
     evaluator = BinaryClassificationEvaluator()
     auc = evaluator.evaluate(predictions)
     
-    return auc
+    return trained_model, auc, predictions
 
 # preprocessing steps
 encoders = create_encoders()
 assembler = create_feature_assembler()
 scaler = create_scaler()
 label_indexer = create_label_indexer()
+
+
 
 #defining my models
 rf_model = RandomForestClassifier(featuresCol='scaled_features', labelCol='label')
@@ -151,19 +159,19 @@ lr_pipeline = Pipeline(stages=[*encoders, assembler, scaler, label_indexer, lr_m
 gbt_pipeline = Pipeline(stages=[*encoders, assembler, scaler, label_indexer, gbt_model])
 
 #train and evaluate each model 
-rf_auc = train_and_evaluate_model(rf_pipeline, train_df, test_df)
-lr_auc = train_and_evaluate_model(lr_pipeline, train_df, test_df)
-gbt_auc = train_and_evaluate_model(gbt_pipeline, train_df, test_df)
+rf_trained_model, rf_auc, rf_predictions = train_and_evaluate_model(rf_pipeline, train_df, validation_df)
+lr_trained_model, lr_auc, lr_predictions = train_and_evaluate_model(lr_pipeline, train_df, validation_df)
+gbt_trained_model, gbt_auc, gbt_predictions = train_and_evaluate_model(gbt_pipeline, train_df, validation_df)
 
 print("Random Forest AUC:", rf_auc)
 print("Logistic Regression AUC:", lr_auc)
 print("GBT Classifier AUC:", gbt_auc)
 
-models = [(rf_auc, rf_model), (lr_auc, lr_model), (gbt_auc, gbt_model)]
+models = [(rf_auc, rf_trained_model), (lr_auc, lr_trained_model), (gbt_auc, gbt_trained_model)]
 best_auc, best_model = max(models, key=lambda x: x[0])
 
 if all(auc == best_auc for auc, _ in models):
-    print("All models have the same AUC. Saving the Logistic Regression model.")
-    best_model = lr_model
+    print("All models have the same AUC. Saving the Random Forest model.")
+    best_model = rf_trained_model
 
-best_model.save("best_model")
+best_model.save("best_model_mini")

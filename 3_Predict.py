@@ -1,7 +1,8 @@
 import streamlit as st
-import pandas as pd
 from pyspark.ml import PipelineModel
 from pyspark.sql import SparkSession
+import shap
+import pandas as pd
 
 # Load the pre-trained Spark model
 spark = SparkSession.builder.appName("ChurnPredictionApp").getOrCreate()
@@ -18,9 +19,24 @@ st.title("Churn Prediction App")
 st.write(test_data.head())
 st.write(test_predictions.head())
 
+
+
 st.write(feature_importance)
 
 
+
+
+
+
+# Convert Spark DataFrame to Pandas DataFrame (if needed)
+test_data_pd = test_data.toPandas()
+
+# Explain the model's predictions using SHAP values
+explainer = shap.TreeExplainer(spark_model)
+shap_values = explainer.shap_values(test_data_pd)
+
+# Plot summary plot for feature importance
+shap.summary_plot(shap_values, test_data_pd)
 
 
 # User Input
