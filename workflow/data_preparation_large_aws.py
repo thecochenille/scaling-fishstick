@@ -189,7 +189,7 @@ if __name__ == "__main__":
     
     
     print('Saving our new dataset ...')
-    path = "s3://sparkifylargedataset/user_data_12GB.jso"
+    path = "s3://sparkifylargedataset/user_data_12GB.json"
     user_df.write.json(path = path, mode='overwrite')
 
     print(f'Large User Dataset prepared sucessfully and saved to the following S3 URI: {path}.')
