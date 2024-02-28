@@ -1,19 +1,19 @@
 """
 File: data_preparation.py
 Author: Isabelle Vea
-Date: 12/14/20123 (last edits)
+Date: 02/28/20123 (last edits)
 
 Description: This scripts takes a json dataset sparkify_event_data.json (a large dataset) that 
 contains usage records of a fictional music platform Sparkify and prepares a new dataset to 
-perform churn prediction analysis. The output file is saved in a csv file 
-to be processed in the model_training.py for model training.
+perform churn prediction analysis. The output file is saved in a json file 
+to be processed in the model_training_large_aws.py for model training.
 
 NB: The dataset used in this script needs to be processed in a cluster and uses spark to do so.
 """
 
 
 
-# import libraries
+# LIBRARIES
 import pyspark
 from pyspark import SparkConf
 from pyspark import SparkFiles
@@ -31,21 +31,20 @@ from pyspark.sql.functions import sum as spark_sum, avg as spark_avg
 
 import datetime
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 
-
+#FUNCTIONS
 def remove_missing_userid(df):
+    ''' This function takes a dataframe and filters out all rows where column UserId is empty
+    Input = Spark dataframe with column UserId included
+    Output = Spark dataframe
+    '''
     condition = df.userId != ''
     df= df.filter(condition)
     
     return df
 
 
-# function for churn labeling
 def create_churn_label(df):
     ''' This function takes a dataframe and creates churn labels based on the 
     churn definition: Cancellation Confirmation value in 'pages' is considered churn.
@@ -139,19 +138,17 @@ def create_features(df):
 
 
 if __name__ == "__main__":
-    # function to create the spark session
     # create a Spark session
     spark = SparkSession \
         .builder \
-        .appName("Sparkify - data preparation") \
+        .appName("Sparkify - data preparation 12GB dataset") \
         .getOrCreate()
-
-    spark.sparkContext.addFile("https://udacity-dsnd.s3.amazonaws.com/sparkify/sparkify_event_data.json")
-
-    file_path = SparkFiles.get("sparkify_event_data.json")
-    df = spark.read.json(file_path)
     
-    print('Here is the data schema')
+    print("Retrieving the 12 GB dataset from S3 bucket and loading them in the spark session")
+    event_data = "s3://sparkifylargedataset/sparkify_event_data.json"
+    df = spark.read.json(event_data)
+    
+    print('Here is the dataset schema')
     print(df.printSchema())
 
     print('Removing rows with missing UserId...')
@@ -188,12 +185,11 @@ if __name__ == "__main__":
     
     #create new features
     print('Creating new features ...')
-    
     user_df = create_features(df)
     
-    user_df_pd = user_df.toPandas()
-    print('Saving our new dataset ...')
     
-    user_df_pd.to_csv('user_data_large.csv', index=False)
+    print('Saving our new dataset ...')
+    path = "s3://sparkifylargedataset/user_data_12GB.jso"
+    user_df.write.json(path = path, mode='overwrite')
 
-    print(f'Large User Dataset prepared sucessfully and saved.')
+    print(f'Large User Dataset prepared sucessfully and saved to the following S3 URI: {path}.')
