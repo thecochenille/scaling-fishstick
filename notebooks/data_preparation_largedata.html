@@ -15212,7 +15212,18 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<div id="cell-id=23281b66-4965-461e-b8eb-c3ba0f5e299c" class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
+
+<div id="cell-id=6e89dd0f-2b7a-4966-8b80-1a148d40b006" class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
+<div class="jp-Cell-inputWrapper">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<h1 id="Sparkify---data-preparation-large-dataset">Sparkify - data preparation large dataset<a class="anchor-link" href="#Sparkify---data-preparation-large-dataset">&#182;</a></h1><h4 id="This-notebook-shows-the-functions-and-steps-taken-to-load-and-prepare-the-12GB-dataset-on-AWS-EMR.">This notebook shows the functions and steps taken to load and prepare the 12GB dataset on AWS EMR.<a class="anchor-link" href="#This-notebook-shows-the-functions-and-steps-taken-to-load-and-prepare-the-12GB-dataset-on-AWS-EMR.">&#182;</a></h4>
+</div>
+</div>
+</div>
+</div><div id="cell-id=9af57ba2-29d0-45eb-b9d8-7ff819974b16" class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -15220,7 +15231,22 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[1]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-python3"><pre><span></span><span class="c1">#Sparkify</span>
+<div class=" highlight hl-python3"><pre><span></span><span class="c1">## LIBRARIES</span>
+<span class="kn">import</span> <span class="nn">pyspark</span>
+<span class="kn">from</span> <span class="nn">pyspark</span> <span class="kn">import</span> <span class="n">SparkConf</span>
+<span class="kn">from</span> <span class="nn">pyspark</span> <span class="kn">import</span> <span class="n">SparkFiles</span>
+<span class="kn">from</span> <span class="nn">pyspark.sql</span> <span class="kn">import</span> <span class="n">SparkSession</span>
+
+<span class="kn">from</span> <span class="nn">pyspark.sql.types</span> <span class="kn">import</span> <span class="n">StringType</span>
+<span class="kn">from</span> <span class="nn">pyspark.sql.types</span> <span class="kn">import</span> <span class="n">IntegerType</span>
+<span class="kn">from</span> <span class="nn">pyspark.sql.types</span> <span class="kn">import</span> <span class="n">TimestampType</span>
+
+<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="n">isnan</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">when</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">udf</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">sort_array</span><span class="p">,</span> <span class="n">asc</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">countDistinct</span><span class="p">,</span> <span class="n">first</span>
+<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="n">udf</span>
+<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="n">to_date</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">dayofmonth</span><span class="p">,</span> <span class="n">dayofweek</span><span class="p">,</span> <span class="n">hour</span><span class="p">,</span> <span class="n">date_format</span><span class="p">,</span> <span class="n">substring</span><span class="p">,</span><span class="n">datediff</span>
+<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="nb">sum</span> <span class="k">as</span> <span class="n">spark_sum</span><span class="p">,</span> <span class="n">avg</span> <span class="k">as</span> <span class="n">spark_avg</span>
+
+<span class="kn">import</span> <span class="nn">datetime</span>
 </pre></div>
 
      </div>
@@ -15264,8 +15290,8 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output " data-mime-type="text/html">
 <table>
-<tbody><tr><th>ID</th><th>YARN Application ID</th><th>Kind</th><th>State</th><th>Spark UI</th><th>Driver log</th><th>User</th><th>Current session?</th></tr><tr><td>0</td><td>application_1708978561620_0001</td><td>pyspark</td><td>idle</td><td><a target="_blank" href="http://ip-172-31-2-209.us-east-2.compute.internal:20888/proxy/application_1708978561620_0001/" class="emr-proxy-link j-3N7FOKPQ9GCC6 application_1708978561620_0001" emr-resource="j-3N7FOKPQ9GCC6
-" application-id="application_1708978561620_0001">Link</a></td><td><a target="_blank" href="http://ip-172-31-15-79.us-east-2.compute.internal:8042/node/containerlogs/container_1708978561620_0001_01_000001/livy">Link</a></td><td>None</td><td>✔</td></tr></tbody></table>
+<tbody><tr><th>ID</th><th>YARN Application ID</th><th>Kind</th><th>State</th><th>Spark UI</th><th>Driver log</th><th>User</th><th>Current session?</th></tr><tr><td>0</td><td>application_1709152527769_0001</td><td>pyspark</td><td>idle</td><td><a target="_blank" href="http://ip-172-31-1-159.us-east-2.compute.internal:20888/proxy/application_1709152527769_0001/" class="emr-proxy-link j-1104OQK0CEOST application_1709152527769_0001" emr-resource="j-1104OQK0CEOST
+" application-id="application_1709152527769_0001">Link</a></td><td><a target="_blank" href="http://ip-172-31-6-177.us-east-2.compute.internal:8042/node/containerlogs/container_1709152527769_0001_01_000001/livy">Link</a></td><td>None</td><td>✔</td></tr></tbody></table>
 </div>
 
 </div>
@@ -15308,78 +15334,12 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 
 </div>
 
-</div><div id="cell-id=9af57ba2-29d0-45eb-b9d8-7ff819974b16" class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
-<div class="jp-Cell-inputWrapper">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[2]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-python3"><pre><span></span><span class="kn">import</span> <span class="nn">pyspark</span>
-<span class="kn">from</span> <span class="nn">pyspark</span> <span class="kn">import</span> <span class="n">SparkConf</span>
-<span class="kn">from</span> <span class="nn">pyspark</span> <span class="kn">import</span> <span class="n">SparkFiles</span>
-<span class="kn">from</span> <span class="nn">pyspark.sql</span> <span class="kn">import</span> <span class="n">SparkSession</span>
-
-<span class="kn">from</span> <span class="nn">pyspark.sql.types</span> <span class="kn">import</span> <span class="n">StringType</span>
-<span class="kn">from</span> <span class="nn">pyspark.sql.types</span> <span class="kn">import</span> <span class="n">IntegerType</span>
-<span class="kn">from</span> <span class="nn">pyspark.sql.types</span> <span class="kn">import</span> <span class="n">TimestampType</span>
-
-
-<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="n">isnan</span><span class="p">,</span> <span class="n">count</span><span class="p">,</span> <span class="n">when</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">udf</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">sort_array</span><span class="p">,</span> <span class="n">asc</span><span class="p">,</span> <span class="n">desc</span><span class="p">,</span> <span class="n">countDistinct</span><span class="p">,</span> <span class="n">first</span>
-<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="n">udf</span>
-<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="n">to_date</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="n">month</span><span class="p">,</span> <span class="n">dayofmonth</span><span class="p">,</span> <span class="n">dayofweek</span><span class="p">,</span> <span class="n">hour</span><span class="p">,</span> <span class="n">date_format</span><span class="p">,</span> <span class="n">substring</span><span class="p">,</span><span class="n">datediff</span>
-<span class="kn">from</span> <span class="nn">pyspark.sql.functions</span> <span class="kn">import</span> <span class="nb">sum</span> <span class="k">as</span> <span class="n">spark_sum</span><span class="p">,</span> <span class="n">avg</span> <span class="k">as</span> <span class="n">spark_avg</span>
-
-<span class="kn">import</span> <span class="nn">datetime</span>
-</pre></div>
-
-     </div>
-</div>
-</div>
-</div>
-
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-
-
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-
-
-
-
-<div class="jp-RenderedText jp-OutputArea-output " data-mime-type="text/plain">
-<pre>VBox()</pre>
-</div>
-
-</div>
-<div class="jp-OutputArea-child">
-    
-    <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-
-
-
-
-<div class="jp-RenderedText jp-OutputArea-output " data-mime-type="text/plain">
-<pre>FloatProgress(value=0.0, bar_style=&#39;info&#39;, description=&#39;Progress:&#39;, layout=Layout(height=&#39;25px&#39;, width=&#39;50%&#39;),…</pre>
-</div>
-
-</div>
-
-</div>
-
-</div>
-
 </div><div id="cell-id=8644b199-01c0-4a15-b9a7-fcc6a5380bdb" class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[3]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[2]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-python3"><pre><span></span><span class="c1">## Creating a spark session</span>
@@ -15434,7 +15394,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[4]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[3]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-python3"><pre><span></span><span class="c1">## Checking if the session is on</span>
@@ -15482,7 +15442,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 
 
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain">
-<pre>&lt;pyspark.sql.session.SparkSession object at 0x7ff9dd7978b0&gt;</pre>
+<pre>&lt;pyspark.sql.session.SparkSession object at 0x7f2c530018b0&gt;</pre>
 </div>
 </div>
 
@@ -15495,7 +15455,7 @@ body[data-format='mobile'] .jp-OutputArea-child .jp-OutputArea-output {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[5]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[4]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
      <div class="CodeMirror cm-s-jupyter">
 <div class=" highlight hl-python3"><pre><span></span><span class="c1">## Reading the full sparkify dataset (I downloaded it from Udacity public link and uploaded it in my own bucket)</span>
@@ -16697,38 +16657,30 @@ None</pre>
 
 </div>
 
-</div><div id="cell-id=a5c72ef4-993f-4b7a-9615-337163ed8aed" class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div>
+<div id="cell-id=af074e73-3f59-4d67-9807-5062f1c58803" class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-python3"><pre><span></span>
-</pre></div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<p>The dataset to use for model training based on the former 12GB dataset has 22,278 rows, which reflects the number of users in the dataset.</p>
 
-     </div>
 </div>
 </div>
 </div>
-
-</div><div id="cell-id=28c3b1b5-e5fa-4cfd-8f6b-9695659b17ea" class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div>
+<div id="cell-id=8887c4ef-7c03-4cc0-8012-814bb064c7a4" class="jp-Cell jp-MarkdownCell jp-Notebook-cell">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In&nbsp;[&nbsp;]:</div>
-<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-     <div class="CodeMirror cm-s-jupyter">
-<div class=" highlight hl-python3"><pre><span></span>
-</pre></div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput " data-mime-type="text/markdown">
+<p>This dataset is written and saved into an S3 bucket to be used for the next steps of the analysis.</p>
 
-     </div>
 </div>
 </div>
 </div>
-
 </div><div id="cell-id=6423603f-e8ec-40a5-93cf-85c814d53c87" class="jp-Cell jp-CodeCell jp-Notebook-cell   ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -16780,7 +16732,7 @@ None</pre>
 
 </div>
 
-</div><div id="cell-id=2116c6eb-b7b9-43b1-9b75-8e83c6eaa5a8" class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
+</div><div id="cell-id=9333055e-4a98-4bee-8a34-d36d173906b3" class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs  ">
 <div class="jp-Cell-inputWrapper">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
